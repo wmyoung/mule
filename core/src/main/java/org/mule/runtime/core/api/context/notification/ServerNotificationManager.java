@@ -186,13 +186,18 @@ public class ServerNotificationManager implements ServerNotificationHandler, Mul
       logger.warn("Notification not enqueued after ServerNotificationManager disposal: " + notification);
       return;
     }
-
+    if (notification instanceof PipelineMessageNotification) {
+      PipelineMessageNotification n = (PipelineMessageNotification) notification;
+      logger.debug("Notification being fired (action: {}) for flow: {}", n.getAction().getIdentifier(),
+                   n.getResourceIdentifier());
+    }
     activeFires.incrementAndGet();
     try {
       if (notification instanceof AbstractServerNotification) {
         ((AbstractServerNotification) notification).setServerId(muleContext.getId());
       }
       if (notification.isSynchronous()) {
+        logger.debug("Sync notification firing");
         notifyListeners(notification, (listener, nfn) -> listener.onNotification(nfn));
       } else {
         notifyListeners(notification, (listener, nfn) -> {
@@ -202,6 +207,11 @@ public class ServerNotificationManager implements ServerNotificationHandler, Mul
             notificationsLiteScheduler.submit(() -> listener.onNotification(nfn));
           }
         });
+      }
+      if (notification instanceof PipelineMessageNotification) {
+        PipelineMessageNotification n = (PipelineMessageNotification) notification;
+        logger.debug("Notification firing completed (action: {}) for flow: {}", n.getAction().getIdentifier(),
+                     n.getResourceIdentifier());
       }
     } finally {
       if (0 == activeFires.decrementAndGet() && disposed.get()) {

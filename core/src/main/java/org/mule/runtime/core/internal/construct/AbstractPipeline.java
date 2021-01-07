@@ -423,8 +423,11 @@ public abstract class AbstractPipeline extends AbstractFlowConstruct implements 
       LOGGER.warn("No event on flow completion", messagingException);
     }
 
-    notificationFirer.dispatch(new PipelineMessageNotification(createInfo(event, messagingException, AbstractPipeline.this),
-                                                               AbstractPipeline.this.getName(), PROCESS_COMPLETE));
+    PipelineMessageNotification notification =
+        new PipelineMessageNotification(createInfo(event, messagingException, AbstractPipeline.this),
+                                        AbstractPipeline.this.getName(), PROCESS_COMPLETE);
+    LOGGER.error("A PROCESS_COMPLETE notification was triggered for: " + notification.getResourceIdentifier());
+    notificationFirer.dispatch(notification);
   }
 
   private Consumer<CoreEvent> afterProcessors() {
