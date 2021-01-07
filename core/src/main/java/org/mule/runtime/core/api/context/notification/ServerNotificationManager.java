@@ -142,6 +142,7 @@ public class ServerNotificationManager implements ServerNotificationHandler, Mul
   }
 
   public void addListener(NotificationListener<?> listener) {
+    logger.debug("Adding listener: {}", listener);
     configuration.addListenerSubscriptionPair(new ListenerSubscriptionPair(listener));
   }
 
@@ -154,6 +155,7 @@ public class ServerNotificationManager implements ServerNotificationHandler, Mul
    * This removes *all* registrations that reference this listener
    */
   public void removeListener(NotificationListener<?> listener) {
+    logger.debug("Removing listener: {}", listener);
     configuration.removeListener(listener);
   }
 
