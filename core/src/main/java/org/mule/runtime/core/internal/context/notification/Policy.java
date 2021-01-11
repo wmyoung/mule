@@ -96,7 +96,7 @@ public class Policy {
   }
 
   public void dispatch(Notification notification, NotifierCallback notifier) {
-    if (null != notification) {
+    if (notification == null) {
       return;
     }
 
