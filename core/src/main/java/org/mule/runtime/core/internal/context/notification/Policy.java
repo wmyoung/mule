@@ -36,7 +36,7 @@ public class Policy {
 
   // map from event to set of senders
   private Map<Class<? extends Notification>, Collection<Sender>> eventToSenders =
-      new HashMap<>();
+      new ConcurrentHashMap<>();
   private Map<Class<? extends Notification>, Collection<Sender>> concreteEventToSenders =
       new HashMap<>();
 
@@ -115,8 +115,8 @@ public class Policy {
     }
   }
 
-  protected synchronized boolean doDispatch(Notification notification, Class<? extends Notification> notfnClass,
-                                            NotifierCallback notifier) {
+  protected boolean doDispatch(Notification notification, Class<? extends Notification> notfnClass,
+                               NotifierCallback notifier) {
     // Optimization to avoid iterating the eventToSenders map each time a notification is fired
     Collection<Sender> senders = concreteEventToSenders.get(notfnClass);
     if (senders != null) {
@@ -128,25 +128,23 @@ public class Policy {
       return true;
     }
 
-    boolean found = false;
     senders = new ArrayList<>();
     for (Entry<Class<? extends Notification>, Collection<Sender>> event : eventToSenders.entrySet()) {
       if (event.getKey().isAssignableFrom(notfnClass)) {
-        found = true;
         senders.addAll(event.getValue());
       }
     }
 
-    if (found) {
+    if (!senders.isEmpty()) {
       dispatchToSenders(notification, senders, notifier);
       concreteEventToSenders.putIfAbsent(notfnClass, senders);
     }
 
     if (notification instanceof PipelineMessageNotification) {
       PipelineMessageNotification n = (PipelineMessageNotification) notification;
-      LOGGER.debug("Notification senders found? {} (flow: {})", found, n.getResourceIdentifier());
+      LOGGER.debug("Notification senders found? {} (flow: {})", !senders.isEmpty(), n.getResourceIdentifier());
     }
-    return found;
+    return !senders.isEmpty();
   }
 
   private void dispatchToSenders(Notification notification, Collection<Sender> senders, NotifierCallback notifier) {
