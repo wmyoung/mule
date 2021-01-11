@@ -97,47 +97,51 @@ public class Policy {
 
   public void dispatch(Notification notification, NotifierCallback notifier) {
     if (null != notification) {
-      Class notfnClass = notification.getClass();
-      Boolean eventKnown = knownEventsExact.get(notfnClass);
-      // search if we don't know about this event, or if we do know it is used
-      if (eventKnown == null) {
-        boolean found = doDispatch(notification, notfnClass, notifier);
+      return;
+    }
+
+    Class notfnClass = notification.getClass();
+    Boolean eventKnown = knownEventsExact.get(notfnClass);
+    // search if we don't know about this event, or if we do know it is used
+    if (eventKnown == null) {
+      boolean found = doDispatch(notification, notfnClass, notifier);
+      knownEventsExact.put(notfnClass, Boolean.valueOf(found));
+    } else if (eventKnown.booleanValue()) {
+      boolean found = doDispatch(notification, notfnClass, notifier);
+      // reduce contention on the map by not writing the same value over and over again.
+      if (!found) {
         knownEventsExact.put(notfnClass, Boolean.valueOf(found));
-      } else if (eventKnown.booleanValue()) {
-        boolean found = doDispatch(notification, notfnClass, notifier);
-        // reduce contention on the map by not writing the same value over and over again.
-        if (!found) {
-          knownEventsExact.put(notfnClass, Boolean.valueOf(found));
-        }
       }
     }
   }
 
-  protected boolean doDispatch(Notification notification, Class<? extends Notification> notfnClass,
-                               NotifierCallback notifier) {
-    boolean found = false;
-
+  protected synchronized boolean doDispatch(Notification notification, Class<? extends Notification> notfnClass,
+                                            NotifierCallback notifier) {
     // Optimization to avoid iterating the eventToSenders map each time a notification is fired
     Collection<Sender> senders = concreteEventToSenders.get(notfnClass);
     if (senders != null) {
-      found = true;
+      if (notification instanceof PipelineMessageNotification) {
+        PipelineMessageNotification n = (PipelineMessageNotification) notification;
+        LOGGER.debug("Notification senders found? true (cached) (flow: {})", n.getResourceIdentifier());
+      }
       dispatchToSenders(notification, senders, notifier);
-    } else {
-      senders = concreteEventToSenders.get(notfnClass);
-      if (senders != null) {
-        dispatchToSenders(notification, senders, notifier);
-      } else {
-        senders = new ArrayList<>();
-        for (Entry<Class<? extends Notification>, Collection<Sender>> event : eventToSenders.entrySet()) {
-          if (event.getKey().isAssignableFrom(notfnClass)) {
-            found = true;
-            senders.addAll(event.getValue());
-            dispatchToSenders(notification, senders, notifier);
-          }
-        }
-        concreteEventToSenders.putIfAbsent(notfnClass, senders);
+      return true;
+    }
+
+    boolean found = false;
+    senders = new ArrayList<>();
+    for (Entry<Class<? extends Notification>, Collection<Sender>> event : eventToSenders.entrySet()) {
+      if (event.getKey().isAssignableFrom(notfnClass)) {
+        found = true;
+        senders.addAll(event.getValue());
       }
     }
+
+    if (found) {
+      dispatchToSenders(notification, senders, notifier);
+      concreteEventToSenders.putIfAbsent(notfnClass, senders);
+    }
+
     if (notification instanceof PipelineMessageNotification) {
       PipelineMessageNotification n = (PipelineMessageNotification) notification;
       LOGGER.debug("Notification senders found? {} (flow: {})", found, n.getResourceIdentifier());
