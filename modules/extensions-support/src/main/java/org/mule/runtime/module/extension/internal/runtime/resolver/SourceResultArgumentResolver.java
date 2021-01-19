@@ -16,7 +16,6 @@ import org.mule.runtime.extension.api.runtime.source.SourceCallbackContext;
 import org.mule.runtime.extension.api.runtime.source.SourceResult;
 
 /**
- * ADD JDOC
  * {@link ArgumentResolver} implementation which create instances of {@link SourceResult}
  *
  * @since 4.0
