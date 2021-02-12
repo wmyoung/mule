@@ -6,67 +6,113 @@
  */
 package org.mule.runtime.module.tooling.internal.artifact.params;
 
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.joining;
+import static org.mule.runtime.api.metadata.DataType.fromType;
+import static org.mule.runtime.app.declaration.api.fluent.SimpleValueType.DATETIME;
+import static org.mule.runtime.app.declaration.api.fluent.SimpleValueType.STRING;
+import static org.mule.runtime.app.declaration.api.fluent.SimpleValueType.TIME;
+
+import org.mule.metadata.api.model.ArrayType;
+import org.mule.metadata.api.model.MetadataType;
+import org.mule.metadata.api.model.ObjectType;
+import org.mule.metadata.java.api.annotation.ClassInformationAnnotation;
 import org.mule.runtime.app.declaration.api.ParameterValue;
 import org.mule.runtime.app.declaration.api.ParameterValueVisitor;
 import org.mule.runtime.app.declaration.api.fluent.ParameterListValue;
 import org.mule.runtime.app.declaration.api.fluent.ParameterObjectValue;
 import org.mule.runtime.app.declaration.api.fluent.ParameterSimpleValue;
+import org.mule.runtime.app.declaration.api.fluent.SimpleValueType;
+import org.mule.runtime.core.api.el.ExpressionManager;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Optional;
 
-import java.time.ZoneId;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TimeZone;
+public class ParameterExtractor {
 
+  private ExpressionManager expressionManager;
 
-public class ParameterExtractor implements ParameterValueVisitor {
-
-  private static final ObjectMapper objectMapper;
-
-  static {
-    //This was added to handle complex parameters and transforming from a Map<String, Object>
-    // to the actual object of type defined my the model.
-    //TODO: CMTS-108
-    objectMapper = new ObjectMapper();
-    objectMapper.registerModule(new DateTimeModule());
-    objectMapper.setTimeZone(TimeZone.getTimeZone(ZoneId.systemDefault()));
+  public <T> T extractValue(ParameterValue parameterValue, MetadataType metadataType, Class<T> type) {
+    return (T) expressionManager
+        .evaluate("#[%dw 2.0 output application/java --- " + toWeaveExpression(parameterValue, metadataType) + "]", fromType(type))
+        .getValue();
   }
 
-  private Object value;
-
-  public static <T> T extractValue(ParameterValue parameterValue, Class<T> type) {
-    return objectMapper.convertValue(extractValue(parameterValue), type);
+  private String toWeaveExpression(ParameterValue parameterValue, MetadataType metadataType) {
+    final ParameterWeaveValueVisitor visitor = new ParameterWeaveValueVisitor(metadataType);
+    parameterValue.accept(visitor);
+    return visitor.get();
   }
 
-  private static Object extractValue(ParameterValue parameterValue) {
-    final ParameterExtractor extractor = new ParameterExtractor();
-    parameterValue.accept(extractor);
-    return extractor.get();
+  public ParameterExtractor(ExpressionManager expressionManager) {
+    this.expressionManager = expressionManager;
   }
 
-  private ParameterExtractor() {}
+  private class ParameterWeaveValueVisitor implements ParameterValueVisitor {
 
-  @Override
-  public void visitSimpleValue(ParameterSimpleValue text) {
-    this.value = text.getValue();
-  }
+    private String script;
+    private MetadataType metadataType;
 
-  @Override
-  public void visitListValue(ParameterListValue list) {
-    this.value = list.getValues().stream().map(ParameterExtractor::extractValue).collect(toList());
-  }
+    public ParameterWeaveValueVisitor(MetadataType metadataType) {
+      this.metadataType = metadataType;
+    }
 
-  @Override
-  public void visitObjectValue(ParameterObjectValue objectValue) {
-    final Map<String, Object> parametersMap = new HashMap<>();
-    objectValue.getParameters().forEach((k, v) -> parametersMap.put(k, extractValue(v)));
-    this.value = parametersMap;
-  }
+    @Override
+    public void visitSimpleValue(ParameterSimpleValue text) {
+      this.script = text.getValue();
+      SimpleValueType valueType = text.getType();
+      if (valueType.equals(DATETIME)) {
+        Optional<ClassInformationAnnotation> classInformationAnnotation = metadataType.getAnnotation(ClassInformationAnnotation.class);
+        if (classInformationAnnotation.isPresent()) {
+          String classname = classInformationAnnotation.get().getClassname();
+          if (classname.equals(LocalDate.class.getName())) {
+            this.script = "'" + this.script + "' as Date";
+          } else if (classname.equals(LocalDateTime.class.getName())) {
+            this.script = "'" + this.script + "' as LocalDateTime";
+          } else {
+            this.script = "'" + this.script + "' as DateTime";
+          }
+        } else {
+          this.script = "'" + this.script + "' as DateTime";
+        }
+      } else if (valueType.equals(TIME)) {
+        this.script = "'" + this.script + "' as Time";
+      } else if (valueType.equals(STRING)) {
+        this.script = "'" + this.script + "'";
+      }
+    }
 
-  private Object get() {
-    return value;
+    @Override
+    public void visitListValue(ParameterListValue list) {
+      StringBuilder scriptBuilder = new StringBuilder();
+      scriptBuilder.append("[");
+      scriptBuilder.append(list.getValues()
+          .stream()
+              //TODO Cast!
+          .map(value -> toWeaveExpression(value, ((ArrayType) metadataType).getType()))
+          .collect(joining(",")));
+      scriptBuilder.append("]");
+      this.script = scriptBuilder.toString();
+    }
+
+    @Override
+    public void visitObjectValue(ParameterObjectValue objectValue) {
+      //TODO cast
+      ObjectType objectType = (ObjectType) metadataType;
+      StringBuilder scriptBuilder = new StringBuilder();
+      scriptBuilder.append("{");
+      scriptBuilder.append(objectValue.getParameters().entrySet()
+          .stream()
+          .map(entry -> "'" + entry.getKey() + "':" + toWeaveExpression(entry.getValue(), objectType.getFieldByName(entry.getKey()).orElseThrow(() -> new IllegalArgumentException("TODO: change this!"))))
+          .collect(joining(",")));
+      scriptBuilder.append("}");
+      this.script = scriptBuilder.toString();
+    }
+
+    private String get() {
+      return script;
+    }
+
   }
 
 }
