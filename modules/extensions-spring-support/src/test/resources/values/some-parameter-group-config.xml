@@ -53,4 +53,52 @@
         </some:one-required-parameter-resolver-operation>
     </flow>
 
+    <flow name="dslTrueSomeParameterAlias">
+        <some:one-required-aliased-parameter-resolver-operation-dsl-true >
+            <some:aliased-parameter-group some-parameter-alias="hello dog!"/>
+        </some:one-required-aliased-parameter-resolver-operation-dsl-true>
+    </flow>
+
+    <flow name="dslTrueComplexParameterAlias">
+        <some:one-required-aliased-parameter-resolver-operation-dsl-true >
+            <some:aliased-parameter-group>
+                <some:complex-parameter-alias another-parameter-alias="hello bird!" yet-another-parameter-alias="whatever"/>
+            </some:aliased-parameter-group>
+        </some:one-required-aliased-parameter-resolver-operation-dsl-true>
+    </flow>
+
+    <flow name="dslTrueSomeParameterAliasDynamic">
+        <some:one-required-aliased-parameter-resolver-operation-dsl-true >
+            <some:aliased-parameter-group some-parameter-alias="#[vars.someParameter]"/>
+        </some:one-required-aliased-parameter-resolver-operation-dsl-true>
+    </flow>
+
+    <flow name="dslTrueComplexParameterAliasDynamic">
+        <some:one-required-aliased-parameter-resolver-operation-dsl-true >
+            <some:aliased-parameter-group>
+                <some:complex-parameter-alias another-parameter-alias="#[vars.anotherParameter]"/>
+            </some:aliased-parameter-group>
+        </some:one-required-aliased-parameter-resolver-operation-dsl-true>
+    </flow>
+
+    <flow name="someParameterAlias">
+        <some:one-required-aliased-parameter-resolver-operation some-parameter-alias="hello dog!" />
+    </flow>
+
+    <flow name="complexParameterAlias">
+        <some:one-required-aliased-parameter-resolver-operation>
+            <some:complex-parameter-alias another-parameter-alias="hello bird!"/>
+        </some:one-required-aliased-parameter-resolver-operation>
+    </flow>
+
+    <flow name="someParameterAliasDynamic">
+        <some:one-required-aliased-parameter-resolver-operation some-parameter-alias="#[vars.someParameter]" />
+    </flow>
+
+    <flow name="complexParameterAliasDynamic">
+        <some:one-required-aliased-parameter-resolver-operation>
+            <some:complex-parameter-alias another-parameter-alias="#[vars.anotherParameter]" yet-another-parameter-alias="#['whatever']"/>
+        </some:one-required-aliased-parameter-resolver-operation>
+    </flow>
+
 </mule>
