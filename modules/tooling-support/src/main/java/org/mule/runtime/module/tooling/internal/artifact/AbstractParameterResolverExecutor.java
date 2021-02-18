@@ -101,9 +101,9 @@ public class AbstractParameterResolverExecutor {
             .orElseThrow(() -> new MuleRuntimeException(createStaticMessage("Could not find parameter with name: '%s' in parameter group: '%s'",
                                                                             parameterName, parameterGroupName)));
         Object value = parameterExtractor.extractValue(parameterElement.getValue(),
-                                                  parameterModel.getType(),
-                                                  artifactHelper.getParameterClass(parameterModel,
-                                                                                   parameterizedElementDeclaration));
+                                                       parameterModel.getType(),
+                                                       artifactHelper.getParameterClass(parameterModel,
+                                                                                        parameterizedElementDeclaration));
         if (!parameterModel.getExpressionSupport().equals(NOT_SUPPORTED) && isExpression(value)) {
           throw new ExpressionNotSupportedException(format("Error resolving value for parameter: '%s' from declaration, it cannot be an EXPRESSION value",
                                                            parameterName));

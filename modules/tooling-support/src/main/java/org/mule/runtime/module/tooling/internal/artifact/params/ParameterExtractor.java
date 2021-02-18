@@ -11,6 +11,7 @@ import static org.mule.runtime.api.metadata.DataType.fromType;
 import static org.mule.runtime.app.declaration.api.fluent.SimpleValueType.DATETIME;
 import static org.mule.runtime.app.declaration.api.fluent.SimpleValueType.STRING;
 import static org.mule.runtime.app.declaration.api.fluent.SimpleValueType.TIME;
+import static org.mule.runtime.extension.api.util.ExtensionMetadataTypeUtils.isMap;
 
 import org.mule.metadata.api.model.ArrayType;
 import org.mule.metadata.api.model.MetadataType;
@@ -23,6 +24,7 @@ import org.mule.runtime.app.declaration.api.fluent.ParameterObjectValue;
 import org.mule.runtime.app.declaration.api.fluent.ParameterSimpleValue;
 import org.mule.runtime.app.declaration.api.fluent.SimpleValueType;
 import org.mule.runtime.core.api.el.ExpressionManager;
+import org.mule.runtime.extension.api.util.ExtensionMetadataTypeUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -34,12 +36,13 @@ public class ParameterExtractor {
 
   public <T> T extractValue(ParameterValue parameterValue, MetadataType metadataType, Class<T> type) {
     return (T) expressionManager
-        .evaluate("#[%dw 2.0 output application/java --- " + toWeaveExpression(parameterValue, metadataType) + "]", fromType(type))
+        .evaluate("#[%dw 2.0 output application/java --- " + toWeaveExpression(parameterValue, metadataType) + "]",
+                  fromType(type))
         .getValue();
   }
 
   private String toWeaveExpression(ParameterValue parameterValue, MetadataType metadataType) {
-    final ParameterWeaveValueVisitor visitor = new ParameterWeaveValueVisitor(metadataType);
+    final DataWeaveParameterValueVisitor visitor = new DataWeaveParameterValueVisitor(metadataType);
     parameterValue.accept(visitor);
     return visitor.get();
   }
@@ -48,12 +51,12 @@ public class ParameterExtractor {
     this.expressionManager = expressionManager;
   }
 
-  private class ParameterWeaveValueVisitor implements ParameterValueVisitor {
+  private class DataWeaveParameterValueVisitor implements ParameterValueVisitor {
 
     private String script;
     private MetadataType metadataType;
 
-    public ParameterWeaveValueVisitor(MetadataType metadataType) {
+    public DataWeaveParameterValueVisitor(MetadataType metadataType) {
       this.metadataType = metadataType;
     }
 
@@ -62,7 +65,8 @@ public class ParameterExtractor {
       this.script = text.getValue();
       SimpleValueType valueType = text.getType();
       if (valueType.equals(DATETIME)) {
-        Optional<ClassInformationAnnotation> classInformationAnnotation = metadataType.getAnnotation(ClassInformationAnnotation.class);
+        Optional<ClassInformationAnnotation> classInformationAnnotation =
+            metadataType.getAnnotation(ClassInformationAnnotation.class);
         if (classInformationAnnotation.isPresent()) {
           String classname = classInformationAnnotation.get().getClassname();
           if (classname.equals(LocalDate.class.getName())) {
@@ -88,7 +92,7 @@ public class ParameterExtractor {
       scriptBuilder.append("[");
       scriptBuilder.append(list.getValues()
           .stream()
-              //TODO Cast!
+          //TODO Cast!
           .map(value -> toWeaveExpression(value, ((ArrayType) metadataType).getType()))
           .collect(joining(",")));
       scriptBuilder.append("]");
@@ -103,7 +107,8 @@ public class ParameterExtractor {
       scriptBuilder.append("{");
       scriptBuilder.append(objectValue.getParameters().entrySet()
           .stream()
-          .map(entry -> "'" + entry.getKey() + "':" + toWeaveExpression(entry.getValue(), objectType.getFieldByName(entry.getKey()).orElseThrow(() -> new IllegalArgumentException("TODO: change this!"))))
+          .map(entry -> "'" + entry.getKey() + "':" + toWeaveExpression(entry.getValue(), isMap(objectType) ? objectType.getOpenRestriction().orElseThrow(() -> new IllegalArgumentException("TODO: change this!"))
+                  : objectType.getFieldByName(entry.getKey()).orElseThrow(() -> new IllegalArgumentException("TODO: change this!")).getValue()))
           .collect(joining(",")));
       scriptBuilder.append("}");
       this.script = scriptBuilder.toString();
