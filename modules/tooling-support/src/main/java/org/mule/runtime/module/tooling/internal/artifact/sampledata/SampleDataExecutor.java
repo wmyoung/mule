@@ -26,6 +26,7 @@ import org.mule.runtime.api.meta.model.ExtensionModel;
 import org.mule.runtime.api.meta.model.HasOutputModel;
 import org.mule.runtime.api.meta.model.data.sample.SampleDataProviderModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterizedModel;
+import org.mule.runtime.api.metadata.ExpressionLanguageMetadataService;
 import org.mule.runtime.api.sampledata.SampleDataFailure;
 import org.mule.runtime.api.sampledata.SampleDataResult;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
@@ -58,8 +59,9 @@ public class SampleDataExecutor extends AbstractParameterResolverExecutor {
   private final SampleDataService sampleDataService;
 
   public SampleDataExecutor(MuleContext muleContext, ExpressionManager expressionManager,
-                            SampleDataService sampleDataService, ReflectionCache reflectionCache, ArtifactHelper artifactHelper) {
-    super(muleContext, expressionManager, reflectionCache, artifactHelper);
+                            SampleDataService sampleDataService, ExpressionLanguageMetadataService expressionLanguageMetadataService,
+                            ReflectionCache reflectionCache, ArtifactHelper artifactHelper) {
+    super(muleContext, expressionManager, expressionLanguageMetadataService, reflectionCache, artifactHelper);
     this.sampleDataService = sampleDataService;
   }
 

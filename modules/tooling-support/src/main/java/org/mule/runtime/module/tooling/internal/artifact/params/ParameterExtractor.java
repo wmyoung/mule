@@ -17,6 +17,8 @@ import org.mule.metadata.api.model.ArrayType;
 import org.mule.metadata.api.model.MetadataType;
 import org.mule.metadata.api.model.ObjectType;
 import org.mule.metadata.java.api.annotation.ClassInformationAnnotation;
+import org.mule.metadata.message.api.el.TypeBindings;
+import org.mule.runtime.api.metadata.ExpressionLanguageMetadataService;
 import org.mule.runtime.app.declaration.api.ParameterValue;
 import org.mule.runtime.app.declaration.api.ParameterValueVisitor;
 import org.mule.runtime.app.declaration.api.fluent.ParameterListValue;
@@ -33,8 +35,21 @@ import java.util.Optional;
 public class ParameterExtractor {
 
   private ExpressionManager expressionManager;
+  private ExpressionLanguageMetadataService expressionLanguageMetadataService;
 
   public <T> T extractValue(ParameterValue parameterValue, MetadataType metadataType, Class<T> type) {
+    expressionLanguageMetadataService.getOutputType(TypeBindings.builder().build(), "{ \"actingField\": 1, \"nonActingField\": \"hi\"}", new ExpressionLanguageMetadataService.MessageCallback() {
+      @Override
+      public void warning(String message, ExpressionLanguageMetadataService.MessageLocation location) {
+
+      }
+
+      @Override
+      public void error(String message, ExpressionLanguageMetadataService.MessageLocation location) {
+
+      }
+    });
+
     return (T) expressionManager
         .evaluate("#[%dw 2.0 output application/java --- " + toWeaveExpression(parameterValue, metadataType) + "]",
                   fromType(type))
@@ -47,8 +62,9 @@ public class ParameterExtractor {
     return visitor.get();
   }
 
-  public ParameterExtractor(ExpressionManager expressionManager) {
+  public ParameterExtractor(ExpressionManager expressionManager, ExpressionLanguageMetadataService expressionLanguageMetadataService) {
     this.expressionManager = expressionManager;
+    this.expressionLanguageMetadataService = expressionLanguageMetadataService;
   }
 
   private class DataWeaveParameterValueVisitor implements ParameterValueVisitor {

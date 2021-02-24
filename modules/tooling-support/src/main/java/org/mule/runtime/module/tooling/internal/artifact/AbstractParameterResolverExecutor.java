@@ -19,6 +19,7 @@ import org.mule.runtime.api.meta.NamedObject;
 import org.mule.runtime.api.meta.model.parameter.ParameterGroupModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterizedModel;
+import org.mule.runtime.api.metadata.ExpressionLanguageMetadataService;
 import org.mule.runtime.app.declaration.api.ParameterElementDeclaration;
 import org.mule.runtime.app.declaration.api.ParameterGroupElementDeclaration;
 import org.mule.runtime.app.declaration.api.ParameterizedElementDeclaration;
@@ -41,6 +42,7 @@ public class AbstractParameterResolverExecutor {
 
   protected final MuleContext muleContext;
   protected final ExpressionManager expressionManager;
+  protected final ExpressionLanguageMetadataService expressionLanguageMetadataService;
   protected final ReflectionCache reflectionCache;
   protected final ArtifactHelper artifactHelper;
 
@@ -49,13 +51,15 @@ public class AbstractParameterResolverExecutor {
   public static final String INVALID_PARAMETER_VALUE = "INVALID_PARAMETER_VALUE";
 
   public AbstractParameterResolverExecutor(MuleContext muleContext, ExpressionManager expressionManager,
+                                           ExpressionLanguageMetadataService expressionLanguageMetadataService,
                                            ReflectionCache reflectionCache, ArtifactHelper artifactHelper) {
     this.muleContext = muleContext;
     this.expressionManager = expressionManager;
+    this.expressionLanguageMetadataService = expressionLanguageMetadataService;
     this.reflectionCache = reflectionCache;
     this.artifactHelper = artifactHelper;
 
-    this.parameterExtractor = new ParameterExtractor(expressionManager);
+    this.parameterExtractor = new ParameterExtractor(expressionManager, expressionLanguageMetadataService);
   }
 
   protected ParameterValueResolver parameterValueResolver(ParameterizedElementDeclaration parameterizedElementDeclaration,

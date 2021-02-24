@@ -18,6 +18,7 @@ import org.mule.runtime.api.exception.MuleRuntimeException;
 import org.mule.runtime.api.meta.model.ComponentModel;
 import org.mule.runtime.api.meta.model.ExtensionModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterizedModel;
+import org.mule.runtime.api.metadata.ExpressionLanguageMetadataService;
 import org.mule.runtime.api.metadata.MetadataKeysContainer;
 import org.mule.runtime.api.metadata.descriptor.ComponentMetadataTypesDescriptor;
 import org.mule.runtime.api.metadata.resolving.MetadataFailure;
@@ -74,6 +75,9 @@ public class InternalDeclarationSession implements DeclarationSession {
   @Inject
   private SampleDataService sampleDataService;
 
+  @Inject
+  private ExpressionLanguageMetadataService expressionLanguageMetadataService;
+
   private final LazyValue<ArtifactHelper> artifactHelperLazyValue;
   private final LazyValue<ValueProviderExecutor> valueProviderExecutorLazyValue;
   private final LazyValue<MetadataKeysExecutor> metadataKeysExecutorLazyValue;
@@ -85,8 +89,8 @@ public class InternalDeclarationSession implements DeclarationSession {
         new LazyValue<>(() -> new ArtifactHelper(extensionManager, componentLocator, artifactDeclaration));
 
     this.valueProviderExecutorLazyValue =
-        new LazyValue<>(() -> new ValueProviderExecutor(muleContext, connectionManager, expressionManager, reflectionCache,
-                                                        artifactHelper()));
+        new LazyValue<>(() -> new ValueProviderExecutor(muleContext, connectionManager, expressionManager, expressionLanguageMetadataService,
+                reflectionCache, artifactHelper()));
     this.metadataKeysExecutorLazyValue =
         new LazyValue<>(() -> new MetadataKeysExecutor(connectionManager, reflectionCache, expressionManager, artifactHelper()));
 
@@ -95,7 +99,7 @@ public class InternalDeclarationSession implements DeclarationSession {
                                                             artifactHelper()));
 
     this.sampleDataExecutorLazyValue =
-        new LazyValue<>(() -> new SampleDataExecutor(muleContext, expressionManager, sampleDataService,
+        new LazyValue<>(() -> new SampleDataExecutor(muleContext, expressionManager, sampleDataService, expressionLanguageMetadataService,
                                                      reflectionCache, artifactHelper()));
   }
 

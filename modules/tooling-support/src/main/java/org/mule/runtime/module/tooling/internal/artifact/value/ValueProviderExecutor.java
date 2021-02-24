@@ -19,6 +19,7 @@ import static org.mule.runtime.module.extension.internal.util.MuleExtensionUtils
 import org.mule.runtime.api.exception.MuleRuntimeException;
 import org.mule.runtime.api.meta.model.parameter.ParameterizedModel;
 import org.mule.runtime.api.meta.model.parameter.ValueProviderModel;
+import org.mule.runtime.api.metadata.ExpressionLanguageMetadataService;
 import org.mule.runtime.api.value.ResolvingFailure;
 import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
@@ -52,9 +53,10 @@ public class ValueProviderExecutor extends AbstractParameterResolverExecutor {
   private final ConnectionManager connectionManager;
 
   public ValueProviderExecutor(MuleContext muleContext, ConnectionManager connectionManager,
-                               ExpressionManager expressionManager, ReflectionCache reflectionCache,
+                               ExpressionManager expressionManager, ExpressionLanguageMetadataService expressionLanguageMetadataService,
+                               ReflectionCache reflectionCache,
                                ArtifactHelper artifactHelper) {
-    super(muleContext, expressionManager, reflectionCache, artifactHelper);
+    super(muleContext, expressionManager, expressionLanguageMetadataService, reflectionCache, artifactHelper);
     this.connectionManager = connectionManager;
   }
 
